@@ -1124,6 +1124,69 @@
       .group-card .deal-banner .compare-check { right: 112px; }
     }
 
+    .ai-advisor-fab {
+      position: fixed;
+      left: 22px;
+      bottom: 22px;
+      z-index: 150;
+      border: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #56d9ad, #0b6f55);
+      color: #fff;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 16px 42px rgba(4,53,39,.28);
+    }
+    .ai-advisor-panel {
+      position: fixed;
+      left: 22px;
+      bottom: 90px;
+      z-index: 190;
+      width: min(380px, calc(100vw - 44px));
+      max-height: min(560px, calc(100vh - 130px));
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: .18s ease;
+    }
+    .ai-advisor-panel.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .ai-advisor-head {
+      background: var(--forest);
+      color: #fff;
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .ai-advisor-head strong { display: block; font-size: 14px; }
+    .ai-advisor-head span { display: block; font-size: 11px; opacity: .7; margin-top: 2px; }
+    .ai-advisor-head button { background: transparent; border: 0; color: #fff; font-size: 18px; line-height: 1; opacity: .8; }
+    .ai-advisor-messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--paper); }
+    .ai-advisor-bubble { padding: 10px 12px; border-radius: 14px; font-size: 13px; line-height: 1.45; max-width: 92%; white-space: pre-wrap; }
+    .ai-advisor-bubble.user { align-self: flex-end; background: var(--forest); color: #fff; border-bottom-right-radius: 4px; }
+    .ai-advisor-bubble.assistant { align-self: flex-start; background: var(--white); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+    .ai-advisor-bubble.pending { color: var(--muted); font-style: italic; }
+    .ai-advisor-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--white); }
+    .ai-advisor-form textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font-size: 13px; max-height: 90px; }
+    .ai-advisor-form button { border: 0; background: var(--mint); color: var(--forest); border-radius: 10px; width: 38px; font-weight: 800; }
+    .ai-advisor-form button:disabled { opacity: .5; }
+    .ai-advisor-disclaimer { font-size: 10px; color: var(--muted); padding: 6px 14px 10px; }
+    @media (max-width: 760px) {
+      .ai-advisor-fab { left: 14px; bottom: 14px; width: 50px; height: 50px; }
+      .ai-advisor-panel { left: 10px; bottom: 74px; width: calc(100vw - 20px); }
+    }
+
   </style>
 </head>
 <body class="" style="">
@@ -5477,6 +5540,8 @@ updateMobileLabels();
   .meridyen-editor-actions .editor-cancel { background: rgba(255,255,255,.10); color: #fff; }
   .meridyen-editor-actions .editor-export { background: #dff5ed; color: #074533; }
   .meridyen-editor-actions .editor-save { background: #42c79a; color: #032c20; }
+  .meridyen-editor-actions .editor-ai { background: #2a6f8f; color: #fff; }
+  .meridyen-editor-actions .editor-ai:disabled { opacity: .6; }
   .meridyen-edit-fragment {
     border-radius: 4px;
     white-space: pre-wrap;
@@ -5587,15 +5652,58 @@ updateMobileLabels();
         </div>
         <div class="meridyen-editor-actions">
           <button type="button" id="meridyenEditorNavigate" class="editor-nav">Sayfada gezin</button>
+          <button type="button" id="meridyenEditorAI" class="editor-ai">🤖 AI ile geliştir</button>
           <button type="button" id="meridyenEditorCancel" class="editor-cancel">Vazgeç</button>
           <button type="button" id="meridyenEditorExport" class="editor-export">Yayınlama HTML'ini indir</button>
           <button type="button" id="meridyenEditorSave" class="editor-save">Kaydet</button>
         </div>`;
       document.body.appendChild(bar);
       document.getElementById('meridyenEditorNavigate').addEventListener('click', toggleInteraction);
+      document.getElementById('meridyenEditorAI').addEventListener('click', aiImprove);
       document.getElementById('meridyenEditorCancel').addEventListener('click', () => stopEditing(true));
       document.getElementById('meridyenEditorSave').addEventListener('click', () => commitDrafts(true));
       document.getElementById('meridyenEditorExport').addEventListener('click', exportPublishableHtml);
+    }
+  }
+
+  let activeEditSpan = null;
+  document.addEventListener('focusin', e => {
+    const span = e.target.closest && e.target.closest('.meridyen-edit-fragment');
+    if (span) activeEditSpan = span;
+  });
+
+  async function aiImprove() {
+    if (!editMode || !activeEditSpan || !activeEditSpan.isConnected) {
+      if (typeof showToast === 'function') showToast('Önce geliştirmek istediğiniz metne tıklayın.');
+      return;
+    }
+    const original = activeEditSpan.textContent;
+    const instruction = window.prompt('Bu metin nasıl geliştirilsin? (örn: daha kısa, daha resmi, daha ikna edici)', '');
+    if (instruction === null) return;
+    const btn = document.getElementById('meridyenEditorAI');
+    const prevLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'AI yazıyor…';
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'editor',
+          lang: langCode(),
+          message: `Instruction: ${instruction || 'improve clarity and tone'}\n\nText:\n${original}`
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.reply) throw new Error(data.error || 'AI request failed');
+      activeEditSpan.textContent = data.reply.trim();
+      activeEditSpan.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      if (typeof showToast === 'function') showToast('AI önerisi uygulandı. Beğenmezseniz “Vazgeç” ile geri alabilirsiniz.');
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('AI isteği başarısız oldu.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevLabel;
     }
   }
 
@@ -6402,6 +6510,152 @@ updateMobileLabels();
     document.querySelectorAll('[data-lang]').forEach(b=>b.addEventListener('click',()=>setTimeout(()=>{translateStatic();if($('aiRecommendationsView').style.display!=='none')renderMatches();},80)));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+
+<button type="button" id="meridyenAiToggle" class="ai-advisor-fab" aria-label="AI Assistant">🤖</button>
+<div id="meridyenAiPanel" class="ai-advisor-panel" aria-hidden="true">
+  <div class="ai-advisor-head">
+    <div>
+      <strong id="meridyenAiTitle">Meridyen AI Danışman</strong>
+      <span id="meridyenAiSubtitle">Portföyünüz ve fırsatlar hakkında sorun</span>
+    </div>
+    <button type="button" id="meridyenAiClose" aria-label="Close">×</button>
+  </div>
+  <div id="meridyenAiMessages" class="ai-advisor-messages"></div>
+  <form id="meridyenAiForm" class="ai-advisor-form">
+    <textarea id="meridyenAiInput" rows="1" placeholder="Bir soru sorun…"></textarea>
+    <button type="submit" id="meridyenAiSend" aria-label="Send">↑</button>
+  </form>
+  <div class="ai-advisor-disclaimer" id="meridyenAiDisclaimer">Bu asistan bilgilendirme amaçlıdır ve yatırım tavsiyesi vermez.</div>
+</div>
+<script id="meridyenAiAdvisorScript">
+(() => {
+  'use strict';
+  const STRINGS = {
+    tr: {
+      title: 'Meridyen AI Danışman',
+      subtitle: 'Portföyünüz ve fırsatlar hakkında sorun',
+      placeholder: 'Bir soru sorun…',
+      disclaimer: 'Bu asistan bilgilendirme amaçlıdır ve yatırım tavsiyesi vermez.',
+      greeting: 'Merhaba! Portföyünüz, giderleriniz veya GEIP fırsatları hakkında soru sorabilirsiniz.',
+      thinking: 'Yazıyor…',
+      error: 'Bir sorun oluştu, lütfen tekrar deneyin.'
+    },
+    en: {
+      title: 'Meridyen AI Advisor',
+      subtitle: 'Ask about your portfolio and opportunities',
+      placeholder: 'Ask a question…',
+      disclaimer: 'This assistant is informational only and does not provide investment advice.',
+      greeting: 'Hi! Ask me about your portfolio, expenses, or GEIP opportunities.',
+      thinking: 'Thinking…',
+      error: 'Something went wrong, please try again.'
+    }
+  };
+
+  let open = false;
+  let history = [];
+  let sending = false;
+
+  const $ = id => document.getElementById(id);
+
+  function lang() {
+    try { return typeof currentLang !== 'undefined' && currentLang ? currentLang : 'tr'; }
+    catch (e) { return 'tr'; }
+  }
+
+  function applyStrings() {
+    const s = STRINGS[lang()];
+    $('meridyenAiTitle').textContent = s.title;
+    $('meridyenAiSubtitle').textContent = s.subtitle;
+    $('meridyenAiInput').placeholder = s.placeholder;
+    $('meridyenAiDisclaimer').textContent = s.disclaimer;
+  }
+
+  function buildContext() {
+    const ctx = {};
+    try { if (typeof portfolioMetrics === 'function') ctx.portfolio = portfolioMetrics(); } catch (e) {}
+    try { if (typeof expenseMetrics === 'function') ctx.expenses = expenseMetrics(); } catch (e) {}
+    try {
+      if (typeof deals !== 'undefined' && Array.isArray(deals)) {
+        ctx.opportunities = deals.map(d => ({
+          name: d.name, category: d.category, assetClass: d.assetClass,
+          returnLabel: d.returnLabel, risk: d.risk, minimum: d.minimum, currency: d.currency
+        }));
+      }
+    } catch (e) {}
+    return ctx;
+  }
+
+  function addBubble(role, text) {
+    const el = document.createElement('div');
+    el.className = 'ai-advisor-bubble ' + role;
+    el.textContent = text;
+    $('meridyenAiMessages').appendChild(el);
+    $('meridyenAiMessages').scrollTop = $('meridyenAiMessages').scrollHeight;
+    return el;
+  }
+
+  function togglePanel(forceOpen) {
+    open = typeof forceOpen === 'boolean' ? forceOpen : !open;
+    $('meridyenAiPanel').classList.toggle('open', open);
+    $('meridyenAiPanel').setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (open) {
+      applyStrings();
+      if (!$('meridyenAiMessages').childElementCount) addBubble('assistant', STRINGS[lang()].greeting);
+      $('meridyenAiInput').focus();
+    }
+  }
+
+  async function sendMessage(text) {
+    if (sending || !text.trim()) return;
+    sending = true;
+    addBubble('user', text);
+    const pending = addBubble('assistant pending', STRINGS[lang()].thinking);
+    $('meridyenAiSend').disabled = true;
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mode: 'advisor', lang: lang(), message: text, history, context: buildContext() })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.reply) throw new Error(data.error || 'request failed');
+      pending.textContent = data.reply;
+      pending.classList.remove('pending');
+      history.push({ role: 'user', content: text });
+      history.push({ role: 'assistant', content: data.reply });
+      history = history.slice(-12);
+    } catch (e) {
+      pending.textContent = STRINGS[lang()].error;
+      pending.classList.remove('pending');
+    } finally {
+      sending = false;
+      $('meridyenAiSend').disabled = false;
+    }
+  }
+
+  function init() {
+    $('meridyenAiToggle').addEventListener('click', () => togglePanel());
+    $('meridyenAiClose').addEventListener('click', () => togglePanel(false));
+    $('meridyenAiForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const input = $('meridyenAiInput');
+      const text = input.value;
+      input.value = '';
+      sendMessage(text);
+    });
+    $('meridyenAiInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        $('meridyenAiForm').requestSubmit();
+      }
+    });
+    applyStrings();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 
