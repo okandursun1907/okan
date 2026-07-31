@@ -1139,8 +1139,30 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 16px 42px rgba(4,53,39,.28);
+      box-shadow: 0 16px 42px rgba(4,53,39,.28), 0 0 0 0 rgba(86,217,173,.55);
+      animation: aiFabPulse 2.8s ease-out infinite;
     }
+    .ai-advisor-fab svg { width: 24px; height: 24px; }
+    @keyframes aiFabPulse {
+      0% { box-shadow: 0 16px 42px rgba(4,53,39,.28), 0 0 0 0 rgba(86,217,173,.5); }
+      70% { box-shadow: 0 16px 42px rgba(4,53,39,.28), 0 0 0 14px rgba(86,217,173,0); }
+      100% { box-shadow: 0 16px 42px rgba(4,53,39,.28), 0 0 0 0 rgba(86,217,173,0); }
+    }
+    .ai-advisor-suggestions { display: flex; flex-direction: column; gap: 7px; margin: 2px 0 4px; }
+    .ai-advisor-suggestion-btn {
+      text-align: left;
+      background: var(--white);
+      border: 1px solid var(--mint, #56d9ad);
+      color: var(--forest, #0b6f55);
+      border-radius: 13px;
+      padding: 9px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 1.35;
+      cursor: pointer;
+      transition: background .15s ease, transform .15s ease;
+    }
+    .ai-advisor-suggestion-btn:hover { background: #eafbf4; transform: translateY(-1px); }
     .ai-advisor-panel {
       position: fixed;
       left: 22px;
@@ -6513,7 +6535,7 @@ updateMobileLabels();
 })();
 </script>
 
-<button type="button" id="meridyenAiToggle" class="ai-advisor-fab" aria-label="AI Assistant">🤖</button>
+<button type="button" id="meridyenAiToggle" class="ai-advisor-fab" aria-label="AI Assistant"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2.5L14.4 9.1L21 11.5L14.4 13.9L12 20.5L9.6 13.9L3 11.5L9.6 9.1L12 2.5Z" fill="#fff"/><circle cx="18.5" cy="5.5" r="1.6" fill="#fff" opacity=".85"/></svg></button>
 <div id="meridyenAiPanel" class="ai-advisor-panel" aria-hidden="true">
   <div class="ai-advisor-head">
     <div>
@@ -6538,7 +6560,11 @@ updateMobileLabels();
       subtitle: 'Portföyünüz ve fırsatlar hakkında sorun',
       placeholder: 'Bir soru sorun…',
       disclaimer: 'Bu asistan bilgilendirme amaçlıdır ve yatırım tavsiyesi vermez.',
-      greeting: 'Merhaba! Portföyünüz, giderleriniz veya GEIP fırsatları hakkında soru sorabilirsiniz.',
+      greeting: 'Merhaba! Size en uygun yatırımı bulmanıza yardımcı olayım.',
+      suggestions: [
+        '💰 Bütçemi söyleyeyim, bana özel yatırım seçenekleri sunun',
+        '🎯 Aylık 5.000 $ kazanmak için hangi yatırımlara ihtiyacım var, gösterin'
+      ],
       thinking: 'Yazıyor…',
       error: 'Bir sorun oluştu, lütfen tekrar deneyin.'
     },
@@ -6547,7 +6573,11 @@ updateMobileLabels();
       subtitle: 'Ask about your portfolio and opportunities',
       placeholder: 'Ask a question…',
       disclaimer: 'This assistant is informational only and does not provide investment advice.',
-      greeting: 'Hi! Ask me about your portfolio, expenses, or GEIP opportunities.',
+      greeting: "Hi! Let me help you find the right investment for you.",
+      suggestions: [
+        '💰 Tell me your budget and show me tailored options',
+        '🎯 Show me what it takes to earn $5,000 a month'
+      ],
       thinking: 'Thinking…',
       error: 'Something went wrong, please try again.'
     }
@@ -6596,19 +6626,42 @@ updateMobileLabels();
     return el;
   }
 
+  function renderSuggestions() {
+    const list = STRINGS[lang()].suggestions || [];
+    if (!list.length) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'ai-advisor-suggestions';
+    wrap.id = 'meridyenAiSuggestions';
+    list.forEach(text => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ai-advisor-suggestion-btn';
+      btn.textContent = text;
+      btn.addEventListener('click', () => sendMessage(text));
+      wrap.appendChild(btn);
+    });
+    $('meridyenAiMessages').appendChild(wrap);
+    $('meridyenAiMessages').scrollTop = $('meridyenAiMessages').scrollHeight;
+  }
+
   function togglePanel(forceOpen) {
     open = typeof forceOpen === 'boolean' ? forceOpen : !open;
     $('meridyenAiPanel').classList.toggle('open', open);
     $('meridyenAiPanel').setAttribute('aria-hidden', open ? 'false' : 'true');
     if (open) {
       applyStrings();
-      if (!$('meridyenAiMessages').childElementCount) addBubble('assistant', STRINGS[lang()].greeting);
+      if (!$('meridyenAiMessages').childElementCount) {
+        addBubble('assistant', STRINGS[lang()].greeting);
+        renderSuggestions();
+      }
       $('meridyenAiInput').focus();
     }
   }
 
   async function sendMessage(text) {
     if (sending || !text.trim()) return;
+    const sugg = document.getElementById('meridyenAiSuggestions');
+    if (sugg) sugg.remove();
     sending = true;
     addBubble('user', text);
     const pending = addBubble('assistant pending', STRINGS[lang()].thinking);
