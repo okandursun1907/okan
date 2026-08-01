@@ -1214,6 +1214,9 @@
     .ai-advisor-bubble.markdown code { background: #eef3f1; padding: 1px 4px; border-radius: 4px; font-size: 11.5px; }
     .ai-advisor-suggestion-btn.primary { background: var(--forest, #0b6f55); color: #fff; border-color: var(--forest, #0b6f55); }
     .ai-advisor-suggestion-btn.primary:hover { background: #094f3d; }
+    .ai-advisor-report-bar { padding: 8px 12px; border-top: 1px solid var(--line); background: var(--white); }
+    .ai-advisor-report-btn { width: 100%; border: 0; background: linear-gradient(135deg, #56d9ad, #0b6f55); color: #fff; border-radius: 12px; padding: 10px 12px; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+    .ai-advisor-report-btn:hover { filter: brightness(1.05); }
     .ai-advisor-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--white); }
     .ai-advisor-form textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font-size: 13px; max-height: 90px; }
     .ai-advisor-form button { border: 0; background: var(--mint); color: var(--forest); border-radius: 10px; width: 38px; font-weight: 800; }
@@ -6561,11 +6564,14 @@ updateMobileLabels();
     <button type="button" id="meridyenAiClose" aria-label="Close">×</button>
   </div>
   <div id="meridyenAiMessages" class="ai-advisor-messages"></div>
+  <div class="ai-advisor-report-bar">
+    <button type="button" id="meridyenAiReportBtn" class="ai-advisor-report-btn">📄 Ücretsiz nakit akış raporu oluştur</button>
+  </div>
   <form id="meridyenAiForm" class="ai-advisor-form">
     <textarea id="meridyenAiInput" rows="1" placeholder="Bir soru sorun…"></textarea>
     <button type="submit" id="meridyenAiSend" aria-label="Send">↑</button>
   </form>
-  <div class="ai-advisor-disclaimer" id="meridyenAiDisclaimer">Bu asistan bilgilendirme amaçlıdır ve yatırım tavsiyesi vermez.</div>
+  <div class="ai-advisor-disclaimer" id="meridyenAiDisclaimer">Bu rehber bilgilendirme amaçlıdır ve yatırım tavsiyesi vermez.</div>
 </div>
 <script id="meridyenAiAdvisorScript">
 (() => {
@@ -6618,6 +6624,12 @@ updateMobileLabels();
     $('meridyenAiSubtitle').textContent = s.subtitle;
     $('meridyenAiInput').placeholder = s.placeholder;
     $('meridyenAiDisclaimer').textContent = s.disclaimer;
+    if (s.cashflowCta) $('meridyenAiReportBtn').textContent = s.cashflowCta;
+  }
+
+  function openFreeCashflowReport() {
+    togglePanel(false);
+    if (typeof window.meridyenOpenFreeCashflowWizard === 'function') window.meridyenOpenFreeCashflowWizard();
   }
 
   function buildContext() {
@@ -6717,17 +6729,6 @@ updateMobileLabels();
       btn.addEventListener('click', () => sendMessage(text));
       wrap.appendChild(btn);
     });
-    if (s.cashflowCta) {
-      const cta = document.createElement('button');
-      cta.type = 'button';
-      cta.className = 'ai-advisor-suggestion-btn primary';
-      cta.textContent = s.cashflowCta;
-      cta.addEventListener('click', () => {
-        togglePanel(false);
-        if (typeof window.meridyenOpenFreeCashflowWizard === 'function') window.meridyenOpenFreeCashflowWizard();
-      });
-      wrap.appendChild(cta);
-    }
     if (!wrap.childElementCount) return;
     $('meridyenAiMessages').appendChild(wrap);
     $('meridyenAiMessages').scrollTop = $('meridyenAiMessages').scrollHeight;
@@ -6783,6 +6784,7 @@ updateMobileLabels();
   function init() {
     $('meridyenAiToggle').addEventListener('click', () => togglePanel());
     $('meridyenAiClose').addEventListener('click', () => togglePanel(false));
+    $('meridyenAiReportBtn').addEventListener('click', openFreeCashflowReport);
     $('meridyenAiForm').addEventListener('submit', e => {
       e.preventDefault();
       const input = $('meridyenAiInput');
