@@ -102,7 +102,8 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: mode === 'editor' ? 600 : 1000,
+        max_tokens: mode === 'editor' ? 700 : 2000,
+        thinking: { type: 'disabled' },
         system,
         messages
       })
