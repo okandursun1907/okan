@@ -1179,9 +1179,10 @@
       opacity: 0;
       pointer-events: none;
       transform: translateY(8px);
-      transition: .18s ease;
+      transition: opacity .18s ease, transform .18s ease, width .28s ease, max-height .28s ease;
     }
     .ai-advisor-panel.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .ai-advisor-panel.expanded { width: min(560px, calc(100vw - 44px)); max-height: min(720px, calc(100vh - 90px)); }
     .ai-advisor-head {
       background: var(--forest);
       color: #fff;
@@ -1199,6 +1200,20 @@
     .ai-advisor-bubble.user { align-self: flex-end; background: var(--forest); color: #fff; border-bottom-right-radius: 4px; }
     .ai-advisor-bubble.assistant { align-self: flex-start; background: var(--white); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
     .ai-advisor-bubble.pending { color: var(--muted); font-style: italic; }
+    .ai-advisor-bubble.markdown { white-space: normal; }
+    .ai-advisor-bubble.markdown .ai-md-h { margin: 8px 0 4px; font-size: 13.5px; color: var(--forest); }
+    .ai-advisor-bubble.markdown .ai-md-h:first-child { margin-top: 0; }
+    .ai-advisor-bubble.markdown .ai-md-p { margin: 0 0 8px; }
+    .ai-advisor-bubble.markdown .ai-md-p:last-child { margin-bottom: 0; }
+    .ai-advisor-bubble.markdown .ai-md-list { margin: 0 0 8px 18px; padding: 0; }
+    .ai-advisor-bubble.markdown .ai-md-list li { margin-bottom: 3px; }
+    .ai-advisor-bubble.markdown .ai-md-table-wrap { overflow-x: auto; margin: 6px 0 8px; }
+    .ai-advisor-bubble.markdown .ai-md-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    .ai-advisor-bubble.markdown .ai-md-table th, .ai-advisor-bubble.markdown .ai-md-table td { border: 1px solid var(--line); padding: 5px 7px; text-align: left; white-space: nowrap; }
+    .ai-advisor-bubble.markdown .ai-md-table th { background: #eafbf4; color: var(--forest); font-weight: 700; }
+    .ai-advisor-bubble.markdown code { background: #eef3f1; padding: 1px 4px; border-radius: 4px; font-size: 11.5px; }
+    .ai-advisor-suggestion-btn.primary { background: var(--forest, #0b6f55); color: #fff; border-color: var(--forest, #0b6f55); }
+    .ai-advisor-suggestion-btn.primary:hover { background: #094f3d; }
     .ai-advisor-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--white); }
     .ai-advisor-form textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font-size: 13px; max-height: 90px; }
     .ai-advisor-form button { border: 0; background: var(--mint); color: var(--forest); border-radius: 10px; width: 38px; font-weight: 800; }
@@ -6522,6 +6537,7 @@ updateMobileLabels();
     if(state.step<steps.length && $('aiWizardView') && $('aiWizardView').style.display!=='none') renderWizard();
     else if($('aiRecommendationsView') && $('aiRecommendationsView').style.display!=='none') renderMatches();
   }
+  window.meridyenOpenFreeCashflowWizard = function(){ resetAnalysis(); openModal('aiCashflowModal'); };
   function init(){
     insertEntryPoints();translateStatic();
     document.querySelectorAll('[data-growth-close]').forEach(x=>x.addEventListener('click',closeModals));$('growthOverlay').addEventListener('click',closeModals);
@@ -6535,12 +6551,12 @@ updateMobileLabels();
 })();
 </script>
 
-<button type="button" id="meridyenAiToggle" class="ai-advisor-fab" aria-label="AI Assistant"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2.5L14.4 9.1L21 11.5L14.4 13.9L12 20.5L9.6 13.9L3 11.5L9.6 9.1L12 2.5Z" fill="#fff"/><circle cx="18.5" cy="5.5" r="1.6" fill="#fff" opacity=".85"/></svg></button>
+<button type="button" id="meridyenAiToggle" class="ai-advisor-fab" aria-label="Yatırım Rehberi"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2.5L14.4 9.1L21 11.5L14.4 13.9L12 20.5L9.6 13.9L3 11.5L9.6 9.1L12 2.5Z" fill="#fff"/><circle cx="18.5" cy="5.5" r="1.6" fill="#fff" opacity=".85"/></svg></button>
 <div id="meridyenAiPanel" class="ai-advisor-panel" aria-hidden="true">
   <div class="ai-advisor-head">
     <div>
-      <strong id="meridyenAiTitle">Meridyen AI Danışman</strong>
-      <span id="meridyenAiSubtitle">Portföyünüz ve fırsatlar hakkında sorun</span>
+      <strong id="meridyenAiTitle">Meridyen Yatırım Rehberi</strong>
+      <span id="meridyenAiSubtitle">Sizi ücretsiz nakit akış raporunuza götürür</span>
     </div>
     <button type="button" id="meridyenAiClose" aria-label="Close">×</button>
   </div>
@@ -6556,28 +6572,30 @@ updateMobileLabels();
   'use strict';
   const STRINGS = {
     tr: {
-      title: 'Meridyen AI Danışman',
-      subtitle: 'Portföyünüz ve fırsatlar hakkında sorun',
+      title: 'Meridyen Yatırım Rehberi',
+      subtitle: 'Sizi ücretsiz nakit akış raporunuza götürür',
       placeholder: 'Bir soru sorun…',
-      disclaimer: 'Bu asistan bilgilendirme amaçlıdır ve yatırım tavsiyesi vermez.',
+      disclaimer: 'Bu rehber bilgilendirme amaçlıdır ve yatırım tavsiyesi vermez.',
       greeting: 'Merhaba! Size en uygun yatırımı bulmanıza yardımcı olayım.',
       suggestions: [
         '💰 Bütçemi söyleyeyim, bana özel yatırım seçenekleri sunun',
         '🎯 Aylık 5.000 $ kazanmak için hangi yatırımlara ihtiyacım var, gösterin'
       ],
+      cashflowCta: '📊 Ücretsiz nakit akış raporunuzu almak için başlayın',
       thinking: 'Yazıyor…',
       error: 'Bir sorun oluştu, lütfen tekrar deneyin.'
     },
     en: {
-      title: 'Meridyen AI Advisor',
-      subtitle: 'Ask about your portfolio and opportunities',
+      title: 'Meridyen Investment Guide',
+      subtitle: 'Guides you to your free cash-flow report',
       placeholder: 'Ask a question…',
-      disclaimer: 'This assistant is informational only and does not provide investment advice.',
+      disclaimer: 'This guide is informational only and does not provide investment advice.',
       greeting: "Hi! Let me help you find the right investment for you.",
       suggestions: [
         '💰 Tell me your budget and show me tailored options',
         '🎯 Show me what it takes to earn $5,000 a month'
       ],
+      cashflowCta: '📊 Start your free cash-flow report',
       thinking: 'Thinking…',
       error: 'Something went wrong, please try again.'
     }
@@ -6617,6 +6635,66 @@ updateMobileLabels();
     return ctx;
   }
 
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function inlineMd(s) {
+    s = escapeHtml(s);
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    return s;
+  }
+
+  function renderMarkdown(text) {
+    const lines = String(text).replace(/\r\n/g, '\n').split('\n');
+    let html = '';
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (!line.trim()) { i++; continue; }
+      const h = line.match(/^(#{1,4})\s+(.*)$/);
+      if (h) {
+        const level = Math.min(h[1].length + 3, 6);
+        html += `<h${level} class="ai-md-h">${inlineMd(h[2])}</h${level}>`;
+        i++; continue;
+      }
+      if (line.trim().startsWith('|') && lines[i + 1] && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1])) {
+        const headerCells = line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+        const rows = [];
+        let j = i + 2;
+        while (j < lines.length && lines[j].trim().startsWith('|')) {
+          rows.push(lines[j].trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()));
+          j++;
+        }
+        html += '<div class="ai-md-table-wrap"><table class="ai-md-table"><thead><tr>' +
+          headerCells.map(c => `<th>${inlineMd(c)}</th>`).join('') + '</tr></thead><tbody>' +
+          rows.map(r => '<tr>' + r.map(c => `<td>${inlineMd(c)}</td>`).join('') + '</tr>').join('') +
+          '</tbody></table></div>';
+        i = j; continue;
+      }
+      if (/^[-*]\s+/.test(line.trim())) {
+        const items = [];
+        let j = i;
+        while (j < lines.length && /^[-*]\s+/.test(lines[j].trim())) {
+          items.push(lines[j].trim().replace(/^[-*]\s+/, ''));
+          j++;
+        }
+        html += '<ul class="ai-md-list">' + items.map(it => `<li>${inlineMd(it)}</li>`).join('') + '</ul>';
+        i = j; continue;
+      }
+      const paraLines = [];
+      let j = i;
+      while (j < lines.length && lines[j].trim() && !/^(#{1,4})\s+/.test(lines[j]) && !lines[j].trim().startsWith('|') && !/^[-*]\s+/.test(lines[j].trim())) {
+        paraLines.push(lines[j]);
+        j++;
+      }
+      html += `<p class="ai-md-p">${paraLines.map(inlineMd).join('<br>')}</p>`;
+      i = j;
+    }
+    return html;
+  }
+
   function addBubble(role, text) {
     const el = document.createElement('div');
     el.className = 'ai-advisor-bubble ' + role;
@@ -6627,12 +6705,11 @@ updateMobileLabels();
   }
 
   function renderSuggestions() {
-    const list = STRINGS[lang()].suggestions || [];
-    if (!list.length) return;
+    const s = STRINGS[lang()];
     const wrap = document.createElement('div');
     wrap.className = 'ai-advisor-suggestions';
     wrap.id = 'meridyenAiSuggestions';
-    list.forEach(text => {
+    (s.suggestions || []).forEach(text => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'ai-advisor-suggestion-btn';
@@ -6640,6 +6717,18 @@ updateMobileLabels();
       btn.addEventListener('click', () => sendMessage(text));
       wrap.appendChild(btn);
     });
+    if (s.cashflowCta) {
+      const cta = document.createElement('button');
+      cta.type = 'button';
+      cta.className = 'ai-advisor-suggestion-btn primary';
+      cta.textContent = s.cashflowCta;
+      cta.addEventListener('click', () => {
+        togglePanel(false);
+        if (typeof window.meridyenOpenFreeCashflowWizard === 'function') window.meridyenOpenFreeCashflowWizard();
+      });
+      wrap.appendChild(cta);
+    }
+    if (!wrap.childElementCount) return;
     $('meridyenAiMessages').appendChild(wrap);
     $('meridyenAiMessages').scrollTop = $('meridyenAiMessages').scrollHeight;
   }
@@ -6662,6 +6751,7 @@ updateMobileLabels();
     if (sending || !text.trim()) return;
     const sugg = document.getElementById('meridyenAiSuggestions');
     if (sugg) sugg.remove();
+    $('meridyenAiPanel').classList.add('expanded');
     sending = true;
     addBubble('user', text);
     const pending = addBubble('assistant pending', STRINGS[lang()].thinking);
@@ -6674,8 +6764,10 @@ updateMobileLabels();
       });
       const data = await res.json();
       if (!res.ok || !data.reply) throw new Error(data.error || 'request failed');
-      pending.textContent = data.reply;
+      pending.innerHTML = renderMarkdown(data.reply);
       pending.classList.remove('pending');
+      pending.classList.add('markdown');
+      $('meridyenAiMessages').scrollTop = $('meridyenAiMessages').scrollHeight;
       history.push({ role: 'user', content: text });
       history.push({ role: 'assistant', content: data.reply });
       history = history.slice(-12);
